@@ -19,13 +19,6 @@ jobs:
       - name: Build Docker image
         run: docker build -t jse-trading .
 
-      # This step intentionally fails on manual dispatch for testing Telegram alerts
-      - name: Simulate failure for Telegram test
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          echo "Simulating failure for Telegram test"
-          exit 1
-
       - name: Run ETL (Sharenet scraper)
         run: |
           mkdir -p data/raw/sharenet
