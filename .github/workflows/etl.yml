@@ -26,7 +26,6 @@ jobs:
           echo "Simulating failure for Telegram test"
           exit 1
 
-
       - name: Run ETL (Sharenet scraper)
         run: |
           mkdir -p data/raw/sharenet
@@ -62,11 +61,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Notify on failure via Telegram
-        if: failure()
+  notify:
+    needs: etl
+    if: needs.etl.result == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram notification
         uses: appleboy/telegram-action@v1.0.1
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
-            ⚠️ JSE ETL pipeline *failed* in job `${{ github.job }}` run `${{ github.run_number }}`. Please investigate.
+            ⚠️ *JSE ETL Pipeline Failed*
+            Please check the workflow in GitHub Actions: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}>
