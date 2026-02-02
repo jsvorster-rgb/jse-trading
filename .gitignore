@@ -1,0 +1,17 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+
+# Data
+data/raw/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# SQLite database files
+*.db

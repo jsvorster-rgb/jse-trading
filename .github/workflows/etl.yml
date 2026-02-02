@@ -1,0 +1,63 @@
+name: JSE ETL Pipeline
+
+# Runs daily at 18:00 SAST (16:00 UTC)
+on:
+  schedule:
+    - cron: '0 16 * * *'
+
+jobs:
+  etl:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: docker build -t jse-trading .
+
+      - name: Run ETL (Sharenet scraper)
+        run: |
+          mkdir -p data/raw/sharenet
+          docker run --rm \
+            -v "${{ github.workspace }}/data/raw/sharenet:/app/data/raw/sharenet" \
+            jse-trading
+
+      - name: Commit raw data updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/raw/sharenet
+          git diff --quiet || \
+            (git commit -m "Automated ETL: update raw JSE data" && git push)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run data normalization
+        run: |
+          mkdir -p data/processed
+          docker run --rm \
+            -v "${{ github.workspace }}/data/raw/sharenet:/app/data/raw/sharenet" \
+            -v "${{ github.workspace }}/data/processed:/app/data/processed" \
+            jse-trading python3 src/etl/normalize.py
+
+      - name: Commit processed data updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/processed/prices.csv
+          git diff --quiet || \
+            (git commit -m "Automated ETL: update processed prices" && git push)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify on failure via Telegram
+        if: failure()
+        uses: appleboy/telegram-action@v0.3.0
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            ⚠️ JSE ETL pipeline *failed* in job `${{ github.job }}` run `${{ github.run_number }}`. Please investigate.
