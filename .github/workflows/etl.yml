@@ -2,6 +2,7 @@ name: JSE ETL Pipeline
 
 # Runs daily at 18:00 SAST (16:00 UTC)
 on:
+  workflow_dispatch:  # manual trigger for tests
   schedule:
     - cron: '0 16 * * *'
 
